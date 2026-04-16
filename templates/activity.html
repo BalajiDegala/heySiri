@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="card">
+    <h2>Activity Log</h2>
+
+    {% for log in logs %}
+        <p>
+            {{ log.timestamp }} - {{ log.user_name }} - {{ log.action }}
+        </p>
+    {% endfor %}
+</div>
+
+{% endblock %}

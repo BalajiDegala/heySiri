@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>heysiri</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial;
+            transition: 0.3s;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        :root {
+            --bg: #0f172a;
+            --text: white;
+            --card: rgba(255,255,255,0.08);
+        }
+
+        .light {
+            --bg: #f4f4f4;
+            --text: black;
+            --card: rgba(0,0,0,0.08);
+        }
+
+        .sidebar {
+            width: 220px;
+            height: 100vh;
+            position: fixed;
+            background: var(--card);
+            backdrop-filter: blur(15px);
+            padding: 20px;
+        }
+
+        .sidebar a {
+            display: block;
+            color: inherit;
+            text-decoration: none;
+            margin: 15px 0;
+        }
+
+        .main {
+            margin-left: 240px;
+            padding: 20px;
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card {
+            background: var(--card);
+            padding: 15px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+
+        button {
+            padding: 8px 12px;
+            border: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="sidebar">
+    <h2>heysiri</h2>
+    <a href="/dashboard/">Dashboard</a>
+    <a href="/agenda/">Agenda</a>
+    <a href="/findings/">Findings</a>
+    <a href="/activity/">Activity</a>
+    <a href="/logout/">Logout</a>
+</div>
+
+<div class="main">
+
+    <div class="topbar">
+        <h3>Plan it. Track it. Reflect it.</h3>
+
+        <button onclick="toggleTheme()">🌗 Theme</button>
+    </div>
+
+    {% block content %}
+    {% endblock %}
+
+</div>
+
+<script>
+function toggleTheme() {
+    document.body.classList.toggle("light");
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="card">
+    <h2>Weekly Progress</h2>
+    <p>{{ percent }}% completed</p>
+
+    <canvas id="chart"></canvas>
+</div>
+
+<script>
+const percent = {{ percent }};
+const remaining = 100 - percent;
+
+const ctx = document.getElementById('chart');
+
+new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Completed', 'Pending'],
+        datasets: [{
+            data: [percent, remaining],
+            backgroundColor: ['#4ade80', '#f87171']
+        }]
+    }
+});
+</script>
+
+{% endblock %}

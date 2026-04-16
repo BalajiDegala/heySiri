@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="card">
+    <h2>Findings</h2>
+
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input name="title" placeholder="Title"><br><br>
+
+        <textarea name="content" placeholder="Write your findings..."></textarea><br><br>
+
+        <input type="file" name="file"><br><br>
+
+        <button>Save</button>
+    </form>
+
+    <hr>
+
+    {% for f in findings %}
+        <div class="card">
+            <h3>{{ f.title }}</h3>
+            <p>{{ f.content }}</p>
+        </div>
+    {% endfor %}
+</div>
+
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="card">
+    <h2>Weekly Agenda</h2>
+
+    <form method="POST">
+        {% csrf_token %}
+        <input name="title" placeholder="New Task">
+        <button>Add</button>
+    </form>
+
+    <hr>
+
+    {% for t in tasks %}
+        <p>
+            {{ t.title }} - 
+            {% if t.completed %} ✅ {% else %} ⏳ {% endif %}
+        </p>
+    {% endfor %}
+</div>
+
+{% endblock %}
