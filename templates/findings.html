@@ -2,28 +2,1321 @@
 
 {% block content %}
 
-<div class="card">
-    <h2>Findings</h2>
+<style>
+    .findings-layout {
+        display: grid;
+        grid-template-columns: 252px minmax(0, 1fr);
+        gap: 14px;
+        align-items: start;
+    }
 
-    <form method="POST" enctype="multipart/form-data">
-        {% csrf_token %}
-        <input name="title" placeholder="Title"><br><br>
+    .topics-rail,
+    .thread-column {
+        min-width: 0;
+    }
 
-        <textarea name="content" placeholder="Write your findings..."></textarea><br><br>
+    .topics-rail {
+        position: sticky;
+        top: 0;
+    }
 
-        <input type="file" name="file"><br><br>
+    .rail-shell {
+        padding: 0;
+        overflow: hidden;
+        background:
+            linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.04)),
+            var(--surface);
+    }
 
-        <button>Save</button>
-    </form>
+    .rail-head {
+        padding: 14px 14px 10px;
+        border-bottom: 1px solid var(--line);
+    }
 
-    <hr>
+    .rail-head h2,
+    .thread-head h2,
+    .composer-head h3,
+    .comments-head h4 {
+        margin: 0;
+    }
 
-    {% for f in findings %}
-        <div class="card">
-            <h3>{{ f.title }}</h3>
-            <p>{{ f.content }}</p>
-        </div>
-    {% endfor %}
+    .rail-head h2,
+    .composer-head h3 {
+        color: var(--text);
+        letter-spacing: 0.01em;
+    }
+
+    .rail-head p,
+    .thread-head p,
+    .composer-head p {
+        margin: 6px 0 0;
+        color: var(--muted);
+        line-height: 1.4;
+        font-size: 12px;
+    }
+
+    .topic-search {
+        padding: 10px 14px 8px;
+        border-bottom: 1px solid var(--line);
+    }
+
+    .topic-list {
+        display: grid;
+        gap: 4px;
+        max-height: calc(100vh - 220px);
+        overflow: auto;
+        padding: 8px;
+    }
+
+    .topic-link {
+        position: relative;
+        display: block;
+        padding: 10px 11px 10px 13px;
+        border-radius: 6px;
+        text-decoration: none;
+        color: var(--text);
+        border: 1px solid transparent;
+        transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+    }
+
+    .topic-link:hover {
+        background:
+            linear-gradient(135deg, rgba(74, 132, 255, 0.12), rgba(44, 211, 202, 0.08)),
+            var(--hover-fill);
+        border-color: rgba(74, 132, 255, 0.22);
+        box-shadow: inset 3px 0 0 var(--accent);
+        transform: translateX(2px);
+    }
+
+    .topic-link strong {
+        display: block;
+        font-size: 13px;
+        line-height: 1.3;
+    }
+
+    .topic-link span {
+        display: block;
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 11px;
+    }
+
+    .thread-column {
+        display: grid;
+        gap: 12px;
+    }
+
+    .composer-panel {
+        margin-top: 8px;
+    }
+
+    .thread-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: flex-start;
+    }
+
+    .thread-head-meta {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-top: 8px;
+    }
+
+    .composer-shell,
+    .thread-feed {
+        display: grid;
+        gap: 12px;
+    }
+
+    .composer-panel {
+        overflow: hidden;
+        border-color: rgba(74, 132, 255, 0.18);
+        background:
+            linear-gradient(135deg, rgba(74, 132, 255, 0.10), rgba(44, 211, 202, 0.05) 34%, rgba(255, 255, 255, 0.10)),
+            var(--surface);
+    }
+
+    .composer-panel summary {
+        list-style: none;
+        cursor: pointer;
+    }
+
+    .composer-panel summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .composer-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: flex-start;
+        padding-bottom: 2px;
+    }
+
+    .composer-head-main {
+        min-width: 0;
+        flex: 1;
+    }
+
+    .composer-grid {
+        display: grid;
+        gap: 8px;
+    }
+
+    .composer-actions,
+    .post-actions,
+    .comment-form,
+    .comment-actions,
+    .message-tools {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    .message-list {
+        display: grid;
+        gap: 10px;
+    }
+
+    .message-card {
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background:
+            linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.04)),
+            var(--surface-soft);
+        box-shadow: 0 14px 32px rgba(77, 95, 130, 0.08);
+        transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+    }
+
+    .message-card:hover {
+        border-color: rgba(74, 132, 255, 0.24);
+        box-shadow: 0 18px 38px rgba(77, 95, 130, 0.12);
+        transform: translateY(-1px);
+    }
+
+    .message-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        align-items: flex-start;
+    }
+
+    .message-head-main {
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+        min-width: 0;
+        flex: 1;
+    }
+
+    .message-avatar,
+    .comment-avatar {
+        width: 30px;
+        height: 30px;
+        border-radius: 6px;
+        display: grid;
+        place-items: center;
+        background: var(--avatar-fill);
+        border: 1px solid var(--avatar-ring);
+        color: #ffffff;
+        font-weight: 800;
+        flex: 0 0 auto;
+        box-shadow: 0 8px 16px rgba(74, 132, 255, 0.12);
+    }
+
+    .comment-avatar {
+        width: 24px;
+        height: 24px;
+        font-size: 10px;
+    }
+
+    .message-meta,
+    .comment-meta {
+        min-width: 0;
+        flex: 1;
+    }
+
+    .message-title,
+    .message-author,
+    .comment-author {
+        margin: 0;
+        font-size: 13px;
+        font-weight: 800;
+    }
+
+    .message-title {
+        color: var(--text);
+        line-height: 1.25;
+        font-size: 15px;
+    }
+
+    .message-authorline {
+        margin: 2px 0 0;
+        color: var(--muted);
+        font-size: 11px;
+        line-height: 1.35;
+    }
+
+    .menu {
+        position: relative;
+    }
+
+    .menu summary {
+        list-style: none;
+    }
+
+    .menu summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .menu-button {
+        min-height: 24px;
+        min-width: 24px;
+        padding: 4px 6px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: var(--soft-fill);
+        color: var(--muted);
+        cursor: pointer;
+        font: inherit;
+        font-size: 11px;
+        font-weight: 700;
+    }
+
+    .menu[open] .menu-button {
+        background: var(--hover-fill);
+        color: var(--text);
+    }
+
+    .menu-icon {
+        display: inline-grid;
+        gap: 3px;
+    }
+
+    .menu-icon span {
+        display: block;
+        width: 10px;
+        height: 1.5px;
+        border-radius: 999px;
+        background: currentColor;
+    }
+
+    .menu-list {
+        position: absolute;
+        top: calc(100% + 6px);
+        right: 0;
+        z-index: 5;
+        min-width: 118px;
+        display: grid;
+        gap: 4px;
+        padding: 6px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background:
+            linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02)),
+            var(--surface-strong);
+        box-shadow: 0 14px 30px rgba(0, 0, 0, 0.24);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+    }
+
+    .menu-item,
+    .menu-list form {
+        display: block;
+        width: 100%;
+    }
+
+    .menu-link,
+    .menu-action {
+        display: block;
+        width: 100%;
+        min-height: 28px;
+        padding: 5px 8px;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        color: var(--text);
+        text-align: left;
+        text-decoration: none;
+        font: inherit;
+        font-size: 12px;
+        cursor: pointer;
+        box-shadow: none;
+    }
+
+    .menu-link:hover,
+    .menu-action:hover {
+        background: var(--hover-fill);
+    }
+
+    .menu-action.danger {
+        color: var(--danger);
+    }
+
+    .message-time,
+    .comment-time {
+        margin: 2px 0 0;
+        color: var(--muted);
+        font-size: 10px;
+    }
+
+    .message-body {
+        margin: 9px 0 0;
+        padding-left: 38px;
+    }
+
+    .message-content,
+    .comment-content {
+        margin: 0;
+        line-height: 1.5;
+        white-space: pre-wrap;
+        font-size: 13px;
+    }
+
+    .message-file {
+        margin-top: 8px;
+    }
+
+    .message-file a {
+        text-decoration: none;
+    }
+
+    .post-actions {
+        margin: 0;
+        padding-left: 0;
+    }
+
+    .comments-wrap {
+        margin-top: 11px;
+        padding-top: 9px;
+        padding-left: 38px;
+        border-top: 1px solid var(--line);
+    }
+
+    .comments-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+
+    .comments-list {
+        display: grid;
+        gap: 6px;
+        margin-bottom: 6px;
+    }
+
+    .comments-more {
+        margin-bottom: 6px;
+    }
+
+    .comments-more summary {
+        list-style: none;
+        cursor: pointer;
+    }
+
+    .comments-more summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .comments-toggle {
+        display: inline-flex;
+        align-items: center;
+        min-height: 24px;
+        padding: 3px 8px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--chip-bg);
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 700;
+    }
+
+    .comments-more:not([open]) .toggle-hide {
+        display: none;
+    }
+
+    .comments-more[open] .toggle-show {
+        display: none;
+    }
+
+    .comments-more-body {
+        margin-top: 6px;
+        display: grid;
+        gap: 6px;
+    }
+
+    .comment-item {
+        display: flex;
+        gap: 6px;
+        align-items: flex-start;
+        padding: 8px;
+        border-radius: 6px;
+        background: var(--soft-fill-strong);
+        border: 1px solid var(--line);
+    }
+
+    .comment-block {
+        display: grid;
+        gap: 4px;
+        min-width: 0;
+        flex: 1;
+    }
+
+    .comment-topline {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        align-items: flex-start;
+    }
+
+    .empty-state {
+        padding: 12px;
+        border: 1px dashed rgba(95, 116, 146, 0.26);
+        border-radius: 6px;
+        color: var(--muted);
+        background: var(--soft-fill);
+        font-size: 13px;
+    }
+
+    .thread-panel {
+        padding: 12px;
+    }
+
+    .thread-feed {
+        padding: 10px;
+        overflow: visible;
+        background:
+            linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.03)),
+            var(--surface);
+    }
+
+    .thread-feed .message-list > :last-child {
+        margin-bottom: 0;
+    }
+
+    .thread-head h2 {
+        font-size: 22px;
+        line-height: 1.1;
+    }
+
+    .composer-head h3,
+    .comments-head h4 {
+        font-size: 14px;
+        line-height: 1.2;
+    }
+
+    .topic-search input,
+    .comment-form input,
+    .composer-grid input,
+    .composer-grid textarea {
+        padding: 9px 10px;
+    }
+
+    .composer-grid textarea {
+        min-height: 108px;
+    }
+
+    .file-control {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 44px;
+        padding: 6px 8px;
+        border: 1px solid var(--line-strong);
+        border-radius: 8px;
+        background: var(--input-bg);
+        color: var(--muted);
+        overflow: hidden;
+    }
+
+    .file-control input[type="file"] {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        cursor: pointer;
+    }
+
+    .file-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 30px;
+        padding: 6px 12px;
+        border-radius: 8px;
+        background: linear-gradient(135deg, var(--accent), #53d6c1);
+        color: #ffffff;
+        font-size: 12px;
+        font-weight: 800;
+        box-shadow: 0 10px 20px rgba(74, 132, 255, 0.14);
+    }
+
+    .file-name {
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+    .attachment-picker {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--soft-fill);
+        overflow: hidden;
+    }
+
+    .attachment-picker summary {
+        list-style: none;
+        cursor: pointer;
+    }
+
+    .attachment-picker summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .attachment-trigger {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 10px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+    }
+
+    .plus-mark {
+        width: 24px;
+        height: 24px;
+        border-radius: 6px;
+        display: grid;
+        place-items: center;
+        background: linear-gradient(135deg, var(--accent), #53d6c1);
+        color: #ffffff;
+        font-size: 18px;
+        line-height: 1;
+        box-shadow: 0 10px 18px rgba(74, 132, 255, 0.16);
+    }
+
+    .attachment-picker-body {
+        display: grid;
+        gap: 10px;
+        padding: 0 10px 10px;
+    }
+
+    .attachment-choice-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .choice-button {
+        min-height: 28px;
+        padding: 5px 9px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--chip-bg);
+        color: var(--muted);
+        box-shadow: none;
+        font-size: 12px;
+        font-weight: 800;
+    }
+
+    .choice-button.is-active {
+        background: linear-gradient(135deg, var(--accent), #53d6c1);
+        color: #ffffff;
+        border-color: transparent;
+    }
+
+    .attachment-option[hidden] {
+        display: none;
+    }
+
+    .option-label {
+        margin: 0 0 6px;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 900;
+        text-transform: uppercase;
+    }
+
+    .code-input-grid {
+        display: grid;
+        gap: 8px;
+    }
+
+    .code-input-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .code-input-grid textarea {
+        min-height: 150px;
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
+    .code-card {
+        margin-top: 10px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        overflow: hidden;
+        background: rgba(12, 20, 32, 0.94);
+        color: #eaf2ff;
+    }
+
+    .code-card-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        align-items: center;
+        padding: 7px 8px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+        color: rgba(234, 242, 255, 0.72);
+        font-size: 11px;
+        font-weight: 800;
+    }
+
+    .copy-code-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 24px;
+        padding: 4px 7px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.08);
+        color: #ffffff;
+        box-shadow: none;
+        font-size: 11px;
+    }
+
+    .copy-code-button:hover {
+        background: rgba(255, 255, 255, 0.14);
+        filter: none;
+    }
+
+    .copy-input-button {
+        border-color: var(--line);
+        background: var(--chip-bg);
+        color: var(--muted);
+    }
+
+    .copy-input-button:hover {
+        background: var(--hover-fill);
+        color: var(--text);
+    }
+
+    .copy-icon {
+        width: 13px;
+        height: 13px;
+        display: block;
+    }
+
+    .copy-icon rect {
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 1.8;
+        rx: 2;
+    }
+
+    .code-card pre {
+        margin: 0;
+        padding: 12px;
+        overflow: auto;
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        font-size: 12px;
+        line-height: 1.55;
+    }
+
+    .topic-search label,
+    .composer-grid label,
+    .comment-form label {
+        font-size: 12px;
+    }
+
+    .pill {
+        min-height: 20px;
+        padding: 2px 7px;
+        font-size: 10px;
+    }
+
+    .mini-button {
+        min-height: 24px;
+        padding: 3px 7px;
+        border-radius: 6px;
+        font-size: 11px;
+        box-shadow: none;
+    }
+
+    .toggle-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 52px;
+        min-height: 24px;
+        padding: 3px 8px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--chip-bg);
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 700;
+    }
+
+    .composer-panel[open] .toggle-open {
+        display: none;
+    }
+
+    .composer-panel:not([open]) .toggle-close {
+        display: none;
+    }
+
+    .composer-body {
+        margin-top: 4px;
+    }
+
+    .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+    }
+
+    .mini-button.danger-button {
+        box-shadow: none;
+    }
+
+    .profile-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .inline-user-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 24px;
+        padding: 2px 8px 2px 3px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--chip-bg);
+    }
+
+    .inline-user-avatar {
+        width: 18px;
+        height: 18px;
+        border-radius: 999px;
+        display: grid;
+        place-items: center;
+        background: var(--avatar-fill);
+        border: 1px solid var(--avatar-ring);
+        color: #eafcf7;
+        font-size: 10px;
+        font-weight: 800;
+    }
+
+    .inline-user-name {
+        max-width: 110px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 700;
+    }
+
+    @media (max-width: 980px) {
+        .findings-layout {
+            grid-template-columns: 1fr;
+        }
+
+        .topics-rail {
+            position: static;
+        }
+
+        .topic-list {
+            max-height: none;
+        }
+    }
+
+    @media (max-width: 640px) {
+        .thread-head,
+        .composer-head {
+            flex-direction: column;
+        }
+
+        .message-body,
+        .post-actions,
+        .comments-wrap {
+            padding-left: 0;
+        }
+
+        .composer-actions a,
+        .composer-actions button,
+        .post-actions a,
+        .post-actions button,
+        .comment-form button {
+            width: 100%;
+        }
+    }
+</style>
+
+<div class="findings-layout">
+    <aside class="topics-rail">
+        <section class="panel rail-shell">
+            <div class="rail-head">
+                <h2>Topics</h2>
+                <p>Topics from posted content.</p>
+            </div>
+
+            <form method="GET" class="topic-search">
+                {% if show_all_topics %}
+                    <input type="hidden" name="topic" value="all">
+                {% elif selected_topic %}
+                    <input type="hidden" name="topic" value="{{ selected_topic.id }}">
+                {% endif %}
+                <div class="field">
+                    <label>Search topics</label>
+                    <input name="q" value="{{ topic_query }}" placeholder="Find a topic">
+                </div>
+            </form>
+
+            <div class="topic-list">
+                <a class="topic-link {% if show_all_topics %}active{% endif %}" href="{% url 'findings' %}?topic=all{% if topic_query %}&q={{ topic_query|urlencode }}{% endif %}">
+                    <strong>All topics</strong>
+                    <span>{{ all_topics|length }} topics</span>
+                </a>
+                {% for topic in topics %}
+                    <a class="topic-link {% if not show_all_topics and selected_topic and selected_topic.id == topic.id %}active{% endif %}" href="{% url 'findings' %}?topic={{ topic.id }}{% if topic_query %}&q={{ topic_query|urlencode }}{% endif %}">
+                        <strong>{{ topic.name }}</strong>
+                        <span>{{ topic.finding_count|default:topic.findings.count }} posts</span>
+                    </a>
+                {% empty %}
+                    <div class="empty-state">No topics found yet.</div>
+                {% endfor %}
+            </div>
+        </section>
+    </aside>
+
+    <main class="thread-column">
+        <details class="panel composer-shell thread-panel composer-panel" id="composer" {% if edit_finding %}open{% else %}open{% endif %}>
+            <summary class="composer-head">
+                <div class="composer-head-main">
+                    <h3>{% if edit_finding %}Edit Post{% else %}New Post{% endif %}</h3>
+                    
+                </div>
+                <div class="profile-pill">
+                    <span class="inline-user-chip">
+                        <span class="inline-user-avatar">{{ request.session.user|default:"T"|slice:":1"|upper }}</span>
+                        <span class="inline-user-name">{{ request.session.user|default:"Team member" }}</span>
+                    </span>
+                    <span class="toggle-button">
+                        <span class="toggle-open">Open</span>
+                        <span class="toggle-close">Close</span>
+                    </span>
+                </div>
+            </summary>
+
+            <div class="composer-body">
+                <form method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="{% if edit_finding %}update_finding{% else %}add_finding{% endif %}">
+                    <input type="hidden" name="q" value="{{ topic_query }}">
+                    {% if edit_finding %}
+                        <input type="hidden" name="finding_id" value="{{ edit_finding.id }}">
+                    {% endif %}
+
+                    <div class="composer-grid">
+                        <div class="field">
+                            <label>Topic title</label>
+                            <input name="topic_name" value="{% if edit_finding and edit_finding.topic %}{{ edit_finding.topic.name }}{% elif selected_topic and not show_all_topics %}{{ selected_topic.name }}{% endif %}" placeholder="Enter topic title" required>
+                        </div>
+                        <div class="field">
+                            <label>Content</label>
+                            <textarea name="content" placeholder="Write the finding or update..." required>{% if edit_finding %}{{ edit_finding.content }}{% endif %}</textarea>
+                        </div>
+                        <div class="field">
+                            <label>Attachment or code</label>
+                            <details class="attachment-picker" data-attachment-picker data-initial-mode="{% if edit_finding and edit_finding.file and edit_finding.code_snippet %}both{% elif edit_finding and edit_finding.code_snippet %}code{% elif edit_finding and edit_finding.file %}file{% else %}none{% endif %}" {% if edit_finding and edit_finding.file or edit_finding and edit_finding.code_snippet %}open{% endif %}>
+                                <summary class="attachment-trigger">
+                                    <span class="plus-mark">+</span>
+                                    <span>Choose attachment option</span>
+                                </summary>
+                                <div class="attachment-picker-body">
+                                    <input type="hidden" name="attachment_mode" value="none" data-attachment-mode>
+                                    <div class="attachment-choice-row" aria-label="Attachment option">
+                                        <button type="button" class="choice-button" data-attachment-choice="file">Attachment</button>
+                                        <button type="button" class="choice-button" data-attachment-choice="code">Code</button>
+                                        <button type="button" class="choice-button" data-attachment-choice="both">Both</button>
+                                    </div>
+                                    <div class="attachment-option" data-attachment-section="file" hidden>
+                                        <p class="option-label">{% if edit_finding %}Replace file{% else %}File upload{% endif %}</p>
+                                        <label class="file-control">
+                                            <span class="file-button">Choose file</span>
+                                            <span class="file-name">No file chosen</span>
+                                            <input type="file" name="file" data-file-input>
+                                        </label>
+                                    </div>
+                                    <div class="attachment-option code-input-grid" data-attachment-section="code" hidden>
+                                        <div class="code-input-head">
+                                            <p class="option-label">Code snippet</p>
+                                            <button type="button" class="copy-code-button copy-input-button" data-copy-code-input>
+                                                <svg class="copy-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                                    <rect x="8" y="8" width="11" height="11"></rect>
+                                                    <rect x="5" y="5" width="11" height="11"></rect>
+                                                </svg>
+                                                <span>Copy</span>
+                                            </button>
+                                        </div>
+                                        <input name="code_language" value="{% if edit_finding %}{{ edit_finding.code_language }}{% endif %}" placeholder="Language label, example: Python">
+                                        <textarea name="code_snippet" placeholder="Paste code here if this finding includes code...">{% if edit_finding %}{{ edit_finding.code_snippet }}{% endif %}</textarea>
+                                    </div>
+                                </div>
+                            </details>
+                        </div>
+                        {% if edit_finding and edit_finding.file %}
+                            <div class="field">
+                                <label>Current attachment</label>
+                                <a href="{{ edit_finding.file.url }}" target="_blank" rel="noopener">{{ edit_finding.file.name }}</a>
+                                <label><input type="checkbox" name="remove_file"> Remove current file</label>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="composer-actions" style="margin-top: 16px;">
+                        {% if edit_finding %}
+                            <a class="button secondary-button" href="{% url 'findings' %}{% if selected_topic %}?topic={{ selected_topic.id }}{% if topic_query %}&q={{ topic_query|urlencode }}{% endif %}{% elif topic_query %}?q={{ topic_query|urlencode }}{% endif %}#topic-feed">Cancel</a>
+                            <button type="submit">Save post</button>
+                        {% else %}
+                            <button type="submit">Post</button>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </details>
+
+        <section class="panel thread-feed" id="topic-feed">
+            <div class="message-list">
+                {% for f in findings %}
+                    <article class="message-card" id="finding-{{ f.id }}">
+                        <div class="message-head">
+                            <div class="message-head-main">
+                                <div class="message-avatar">{{ f.created_by|default:"G"|slice:":1"|upper }}</div>
+                                <div class="message-meta">
+                                    <p class="message-title">{{ f.topic.name }}</p>
+                                    <p class="message-authorline">Created by {{ f.created_by }}</p>
+                                    <p class="message-time">{{ f.created_at|date:"M d, Y · H:i" }}</p>
+                                </div>
+                            </div>
+                            <div class="message-tools">
+                                <details class="menu">
+                                    <summary class="menu-button" aria-label="Post actions">
+                                        <span class="menu-icon" aria-hidden="true">
+                                            <span></span>
+                                            <span></span>
+                                            <span></span>
+                                        </span>
+                                        <span class="sr-only">Post actions</span>
+                                    </summary>
+                                    <div class="menu-list">
+                                        <a class="menu-link" href="{% url 'findings' %}?topic={% if show_all_topics %}all{% else %}{{ f.topic_id }}{% endif %}{% if topic_query %}&q={{ topic_query|urlencode }}{% endif %}&edit={{ f.id }}#composer">Edit</a>
+                                        <form method="POST">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="action" value="delete_finding">
+                                            <input type="hidden" name="finding_id" value="{{ f.id }}">
+                                            <input type="hidden" name="q" value="{{ topic_query }}">
+                                            <button type="submit" class="menu-action danger">Delete</button>
+                                        </form>
+                                    </div>
+                                </details>
+                            </div>
+                        </div>
+
+                        <div class="message-body">
+                            <p class="message-content">{{ f.content }}</p>
+                            {% if f.file %}
+                                <div class="message-file">
+                                    <a class="pill" href="{{ f.file.url }}" target="_blank" rel="noopener">Open attachment</a>
+                                </div>
+                            {% endif %}
+                            {% if f.code_snippet %}
+                                <div class="code-card">
+                                    <div class="code-card-head">
+                                        <span>{{ f.code_language|default:"Code" }}</span>
+                                        <button type="button" class="copy-code-button" data-copy-code>
+                                            <svg class="copy-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                                <rect x="8" y="8" width="11" height="11"></rect>
+                                                <rect x="5" y="5" width="11" height="11"></rect>
+                                            </svg>
+                                            <span>Copy</span>
+                                        </button>
+                                    </div>
+                                    <pre><code>{{ f.code_snippet }}</code></pre>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="comments-wrap">
+                            <div class="comments-head">
+                                <h4>Comments</h4>
+                                <span class="pill">{{ f.comments.count }} replies</span>
+                            </div>
+
+                            {% with first_comment=f.comments.all|first remaining_comments=f.comments.all|slice:"1:" %}
+                                {% if first_comment %}
+                                    <div class="comments-list">
+                                        <div class="comment-item">
+                                            <div class="comment-avatar">{{ first_comment.created_by|default:"G"|slice:":1"|upper }}</div>
+                                            <div class="comment-block">
+                                                <div class="comment-topline">
+                                                    <div class="comment-meta">
+                                                        <p class="comment-author">{{ first_comment.created_by }}</p>
+                                                        <p class="comment-time">{{ first_comment.created_at|date:"M d, Y · H:i" }}</p>
+                                                    </div>
+                                                    <div class="comment-actions">
+                                                        <details class="menu">
+                                                            <summary class="menu-button" aria-label="Comment actions">
+                                                                <span class="menu-icon" aria-hidden="true">
+                                                                    <span></span>
+                                                                    <span></span>
+                                                                    <span></span>
+                                                                </span>
+                                                                <span class="sr-only">Comment actions</span>
+                                                            </summary>
+                                                            <div class="menu-list">
+                                                                <a class="menu-link" href="{% url 'findings' %}?topic={% if show_all_topics %}all{% else %}{{ f.topic_id }}{% endif %}{% if topic_query %}&q={{ topic_query|urlencode }}{% endif %}&edit_comment={{ first_comment.id }}#finding-{{ f.id }}">Edit</a>
+                                                                <form method="POST">
+                                                                    {% csrf_token %}
+                                                                    <input type="hidden" name="action" value="delete_comment">
+                                                                    <input type="hidden" name="comment_id" value="{{ first_comment.id }}">
+                                                                    <input type="hidden" name="q" value="{{ topic_query }}">
+                                                                    <button type="submit" class="menu-action danger">Delete</button>
+                                                                </form>
+                                                            </div>
+                                                        </details>
+                                                    </div>
+                                                </div>
+                                                {% if edit_comment and edit_comment.id == first_comment.id %}
+                                                    <form method="POST" class="comment-form">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="action" value="update_comment">
+                                                        <input type="hidden" name="comment_id" value="{{ first_comment.id }}">
+                                                        <input type="hidden" name="q" value="{{ topic_query }}">
+                                                        <div class="field" style="flex: 1 1 220px; margin: 0;">
+                                                            <label>Edit comment</label>
+                                                            <input name="comment_content" value="{{ first_comment.content }}">
+                                                        </div>
+                                                        <button type="submit" class="mini-button">Save</button>
+                                                        <a class="button secondary-button mini-button" href="{% url 'findings' %}?topic={% if show_all_topics %}all{% else %}{{ f.topic_id }}{% endif %}{% if topic_query %}&q={{ topic_query|urlencode }}{% endif %}#finding-{{ f.id }}">Cancel</a>
+                                                    </form>
+                                                {% else %}
+                                                    <p class="comment-content">{{ first_comment.content }}</p>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {% if remaining_comments %}
+                                        <details class="comments-more" {% if edit_comment and edit_comment.finding_id == f.id and edit_comment.id != first_comment.id %}open{% endif %}>
+                                            <summary class="comments-toggle">
+                                                <span class="toggle-show">Show {{ f.comments.count|add:"-1" }} more</span>
+                                                <span class="toggle-hide">Hide comments</span>
+                                            </summary>
+                                            <div class="comments-more-body">
+                                                {% for comment in remaining_comments %}
+                                                    <div class="comment-item">
+                                                        <div class="comment-avatar">{{ comment.created_by|default:"G"|slice:":1"|upper }}</div>
+                                                        <div class="comment-block">
+                                                            <div class="comment-topline">
+                                                                <div class="comment-meta">
+                                                                    <p class="comment-author">{{ comment.created_by }}</p>
+                                                                    <p class="comment-time">{{ comment.created_at|date:"M d, Y · H:i" }}</p>
+                                                                </div>
+                                                                <div class="comment-actions">
+                                                                    <details class="menu">
+                                                                        <summary class="menu-button" aria-label="Comment actions">
+                                                                            <span class="menu-icon" aria-hidden="true">
+                                                                                <span></span>
+                                                                                <span></span>
+                                                                                <span></span>
+                                                                            </span>
+                                                                            <span class="sr-only">Comment actions</span>
+                                                                        </summary>
+                                                                        <div class="menu-list">
+                                                                            <a class="menu-link" href="{% url 'findings' %}?topic={% if show_all_topics %}all{% else %}{{ f.topic_id }}{% endif %}{% if topic_query %}&q={{ topic_query|urlencode }}{% endif %}&edit_comment={{ comment.id }}#finding-{{ f.id }}">Edit</a>
+                                                                            <form method="POST">
+                                                                                {% csrf_token %}
+                                                                                <input type="hidden" name="action" value="delete_comment">
+                                                                                <input type="hidden" name="comment_id" value="{{ comment.id }}">
+                                                                                <input type="hidden" name="q" value="{{ topic_query }}">
+                                                                                <button type="submit" class="menu-action danger">Delete</button>
+                                                                            </form>
+                                                                        </div>
+                                                                    </details>
+                                                                </div>
+                                                            </div>
+                                                            {% if edit_comment and edit_comment.id == comment.id %}
+                                                                <form method="POST" class="comment-form">
+                                                                    {% csrf_token %}
+                                                                    <input type="hidden" name="action" value="update_comment">
+                                                                    <input type="hidden" name="comment_id" value="{{ comment.id }}">
+                                                                    <input type="hidden" name="q" value="{{ topic_query }}">
+                                                                    <div class="field" style="flex: 1 1 220px; margin: 0;">
+                                                                        <label>Edit comment</label>
+                                                                        <input name="comment_content" value="{{ comment.content }}">
+                                                                    </div>
+                                                                    <button type="submit" class="mini-button">Save</button>
+                                                                    <a class="button secondary-button mini-button" href="{% url 'findings' %}?topic={% if show_all_topics %}all{% else %}{{ f.topic_id }}{% endif %}{% if topic_query %}&q={{ topic_query|urlencode }}{% endif %}#finding-{{ f.id }}">Cancel</a>
+                                                                </form>
+                                                            {% else %}
+                                                                <p class="comment-content">{{ comment.content }}</p>
+                                                            {% endif %}
+                                                        </div>
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                        </details>
+                                    {% endif %}
+                                {% else %}
+                                    <div class="empty-state">No comments yet.</div>
+                                {% endif %}
+                            {% endwith %}
+
+                            <form method="POST" class="comment-form">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="add_comment">
+                                <input type="hidden" name="finding_id" value="{{ f.id }}">
+                                <input type="hidden" name="q" value="{{ topic_query }}">
+                                <div class="field" style="flex: 1 1 220px; margin: 0;">
+                                    <label>Add comment</label>
+                                    <input name="comment_content" placeholder="Write a reply">
+                                </div>
+                                <button type="submit" class="mini-button">Comment</button>
+                            </form>
+                        </div>
+                    </article>
+                {% empty %}
+                    <div class="empty-state">No posts yet for this topic.</div>
+                {% endfor %}
+            </div>
+        </section>
+    </main>
 </div>
+
+<script>
+document.querySelectorAll('[data-file-input]').forEach((input) => {
+    input.addEventListener('change', () => {
+        const fileName = input.files && input.files.length
+            ? input.files[0].name
+            : 'No file chosen';
+        const label = input.closest('.file-control');
+        const display = label ? label.querySelector('.file-name') : null;
+        if (display) {
+            display.textContent = fileName;
+        }
+    });
+});
+
+document.querySelectorAll('[data-attachment-picker]').forEach((picker) => {
+    const buttons = picker.querySelectorAll('[data-attachment-choice]');
+    const fileSection = picker.querySelector('[data-attachment-section="file"]');
+    const codeSection = picker.querySelector('[data-attachment-section="code"]');
+    const modeInput = picker.querySelector('[data-attachment-mode]');
+
+    function setMode(mode) {
+        const showFile = mode === 'file' || mode === 'both';
+        const showCode = mode === 'code' || mode === 'both';
+
+        if (modeInput) {
+            modeInput.value = mode;
+        }
+
+        if (fileSection) {
+            fileSection.hidden = !showFile;
+        }
+
+        if (codeSection) {
+            codeSection.hidden = !showCode;
+        }
+
+        buttons.forEach((button) => {
+            button.classList.toggle('is-active', button.dataset.attachmentChoice === mode);
+        });
+    }
+
+    buttons.forEach((button) => {
+        button.addEventListener('click', () => {
+            setMode(button.dataset.attachmentChoice);
+        });
+    });
+
+    setMode(picker.dataset.initialMode || 'none');
+});
+
+document.querySelectorAll('[data-copy-code], [data-copy-code-input]').forEach((button) => {
+    button.addEventListener('click', async () => {
+        let text = '';
+
+        if (button.hasAttribute('data-copy-code-input')) {
+            const inputGrid = button.closest('.code-input-grid');
+            const textarea = inputGrid ? inputGrid.querySelector('textarea') : null;
+            text = textarea ? textarea.value : '';
+        } else {
+            const card = button.closest('.code-card');
+            const code = card ? card.querySelector('code') : null;
+            text = code ? code.textContent : '';
+        }
+
+        if (!text) {
+            return;
+        }
+
+        const label = button.querySelector('span');
+        try {
+            await navigator.clipboard.writeText(text);
+            if (label) {
+                label.textContent = 'Copied';
+                window.setTimeout(() => {
+                    label.textContent = 'Copy';
+                }, 1400);
+            }
+        } catch (error) {
+            if (button.hasAttribute('data-copy-code-input')) {
+                const inputGrid = button.closest('.code-input-grid');
+                const textarea = inputGrid ? inputGrid.querySelector('textarea') : null;
+                if (textarea) {
+                    textarea.select();
+                }
+            } else {
+                const card = button.closest('.code-card');
+                const code = card ? card.querySelector('code') : null;
+                if (code) {
+                    const range = document.createRange();
+                    range.selectNodeContents(code);
+                    const selection = window.getSelection();
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                }
+            }
+        }
+    });
+});
+</script>
 
 {% endblock %}

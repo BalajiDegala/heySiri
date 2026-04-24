@@ -2,23 +2,717 @@
 
 {% block content %}
 
-<div class="card">
-    <h2>Weekly Agenda</h2>
+<style>
+    .agenda-page {
+        display: grid;
+        gap: 18px;
+    }
 
-    <form method="POST">
-        {% csrf_token %}
-        <input name="title" placeholder="New Task">
-        <button>Add</button>
-    </form>
+    .summary-band {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 180px;
+        gap: 18px;
+        align-items: center;
+    }
 
-    <hr>
+    .summary-band h2 {
+        margin: 0;
+        font-size: 26px;
+    }
 
-    {% for t in tasks %}
-        <p>
-            {{ t.title }} - 
-            {% if t.completed %} ✅ {% else %} ⏳ {% endif %}
-        </p>
-    {% endfor %}
+    .summary-band p {
+        margin: 8px 0 0;
+    }
+
+    .progress-ring {
+        display: grid;
+        place-items: center;
+        aspect-ratio: 1;
+        border-radius: 8px;
+        background:
+            conic-gradient(var(--accent) calc({{ metrics.percent }} * 1%), var(--surface-soft) 0);
+        color: var(--text);
+    }
+
+    .progress-ring div {
+        display: grid;
+        place-items: center;
+        width: 118px;
+        aspect-ratio: 1;
+        border-radius: 8px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+    }
+
+    .progress-ring strong {
+        font-size: 28px;
+    }
+
+    .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(130px, 1fr));
+        gap: 12px;
+    }
+
+    .metric {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 14px;
+        background: var(--surface);
+    }
+
+    .metric span {
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 800;
+    }
+
+    .metric strong {
+        display: block;
+        margin-top: 8px;
+        font-size: 24px;
+    }
+
+    .tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        border-bottom: 1px solid var(--line);
+        padding-bottom: 10px;
+    }
+
+    .tab-button {
+        background: var(--surface);
+        color: var(--muted);
+        border-color: var(--line);
+    }
+
+    .tab-button:hover,
+    .tab-button.active {
+        background: var(--accent-soft);
+        color: var(--accent-strong);
+        border-color: transparent;
+    }
+
+    .tab-panel {
+        display: none;
+    }
+
+    .tab-panel.active {
+        display: grid;
+        gap: 18px;
+    }
+
+    .section-title {
+        display: flex;
+        justify-content: space-between;
+        gap: 14px;
+        align-items: flex-start;
+        margin-bottom: 16px;
+    }
+
+    .section-title h3 {
+        margin: 0;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(140px, 1fr));
+        gap: 14px;
+    }
+
+    .wide {
+        grid-column: span 2;
+    }
+
+    .full {
+        grid-column: 1 / -1;
+    }
+
+    .action-row {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 16px;
+    }
+
+    .board {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(230px, 1fr));
+        gap: 14px;
+        overflow-x: auto;
+        padding-bottom: 4px;
+    }
+
+    .board-column {
+        display: grid;
+        align-content: start;
+        gap: 12px;
+        min-width: 230px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface-soft);
+        padding: 12px;
+    }
+
+    .column-heading {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        align-items: center;
+        color: var(--text);
+    }
+
+    .work-item {
+        display: grid;
+        gap: 12px;
+        border: 1px solid var(--line);    <h6>BRO</h6>
+
+        border-radius: 8px;
+        padding: 14px;
+        background: var(--surface);
+    }
+
+    .work-item h4 {
+        margin: 0;
+        line-height: 1.35;
+    }
+
+    .work-item p {
+        margin: 0;
+        line-height: 1.45;
+    }
+
+    .work-item-form {
+        display: grid;
+        gap: 12px;
+    }
+
+    .work-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .work-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: space-between;
+    }
+
+    .work-actions form,
+    .work-actions button {
+        width: 100%;
+    }
+
+    .compact-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .checkbox-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .checkbox-row input {
+        width: auto;
+    }
+
+    .split-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(320px, 0.75fr);
+        gap: 18px;
+    }
+
+    .table-list {
+        display: grid;
+        gap: 10px;
+    }
+
+    .table-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 160px 140px;
+        gap: 12px;
+        align-items: center;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 12px;
+        background: var(--surface);
+    }
+
+    .table-row p {
+        margin: 5px 0 0;
+    }
+
+    .standup-list {
+        display: grid;
+        gap: 10px;
+    }
+
+    .standup-entry {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 14px;
+        background: var(--surface);
+    }
+
+    .standup-entry p {
+        margin: 8px 0 0;
+        line-height: 1.45;
+    }
+
+    .empty-state {
+        border: 1px dashed var(--line);    <h6>BRO</h6>
+
+        border-radius: 8px;
+        padding: 18px;
+        background: var(--surface);
+        color: var(--muted);
+    }
+
+    @media (max-width: 1100px) {
+        .summary-band,
+        .split-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .progress-ring {
+            width: 180px;
+        }
+
+        .metric-grid,
+        .form-grid {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .wide {
+            grid-column: span 2;
+        }
+    }
+
+    @media (max-width: 720px) {
+        .metric-grid,
+        .form-grid,
+        .compact-grid,
+        .table-row {
+            grid-template-columns: 1fr;
+        }
+
+        .wide {
+            grid-column: 1;
+        }
+
+        .action-row {
+            justify-content: stretch;
+            flex-direction: column;
+        }
+
+        .action-row button {
+            width: 100%;
+        }
+    }
+</style>
+
+<div class="agenda-page">
+    <section class="panel">
+        <div class="summary-band">
+            <div>
+                <span class="pill success">Active </span>
+                <h2>{{ sprint.name }}</h2>
+                <p class="muted">{{ sprint.goal|default:"Define a sprint goal to align the team." }}</p>
+                <p>{{ sprint.start_date }} to {{ sprint.end_date }}</p>
+            </div>
+
+            <div class="progress-ring" aria-label="{{ metrics.percent }} percent complete">
+                <div>
+                    <strong>{{ metrics.percent }}%</strong>
+                    <span class="muted">complete</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="metric-grid">
+        <div class="metric">
+            <span>Items done</span>
+            <strong>{{ metrics.done_items }}/{{ metrics.total_items }}</strong>
+        </div>
+        <div class="metric">
+            <span>Points done</span>
+            <strong>{{ metrics.done_points }}/{{ metrics.total_points }}</strong>
+        </div>
+        <div class="metric">
+            <span>Remaining points</span>
+            <strong>{{ metrics.remaining_points }}</strong>
+        </div>
+        <div class="metric">
+            <span>Blocked items</span>
+            <strong>{{ metrics.blocked_items }}</strong>
+        </div>
+    </div>
+
+    <section class="panel">
+        <div class="tabs" role="tablist" aria-label="Agenda sections">
+            <button type="button" class="tab-button active" data-tab="plan">Sprint plan</button>
+            <button type="button" class="tab-button" data-tab="board">Board</button>
+            <button type="button" class="tab-button" data-tab="blockers">Blockers</button>
+            <button type="button" class="tab-button" data-tab="standup">Standup</button>
+        </div>
+    </section>
+
+    <section class="tab-panel active" data-panel="plan">
+        <div class="split-grid">
+            <section class="panel">
+                <div class="section-title">
+                    <div>
+                        <h3>Sprint details</h3>
+                        <p class="muted">Keep the goal and dates visible before the team commits work.</p>
+                    </div>
+                </div>
+
+                <form method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="save_sprint">
+                    <input type="hidden" name="next_tab" value="plan">
+
+                    <div class="form-grid">
+                        <div class="field wide">
+                            <label>Sprint name</label>
+                            <input name="sprint_name" value="{{ sprint.name }}" required>
+                        </div>
+                        <div class="field">
+                            <label>Start date</label>
+                            <input type="date" name="start_date" value="{{ sprint.start_date|date:'Y-m-d' }}" required>
+                        </div>
+                        <div class="field">
+                            <label>End date</label>
+                            <input type="date" name="end_date" value="{{ sprint.end_date|date:'Y-m-d' }}" required>
+                        </div>
+                        <div class="field full">
+                            <label>Sprint goal</label>
+                            <textarea name="goal" placeholder="What should this sprint achieve?">{{ sprint.goal }}</textarea>
+                        </div>
+                    </div>
+
+                    <div class="action-row">
+                        <button type="submit">Save sprint plan</button>
+                    </div>
+                </form>
+            </section>
+
+            <section class="panel">
+                <div class="section-title">
+                    <div>
+                        <h3>Add work item</h3>
+                        <p class="muted">Create a backlog item, task, bug, or follow-up.</p>
+                    </div>
+                </div>
+
+                <form method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add_item">
+                    <input type="hidden" name="next_tab" value="board">
+
+                    <div class="form-grid">
+                        <div class="field full">
+                            <label>Title</label>
+                            <input name="title" placeholder="User story or task" required>
+                        </div>
+                        <div class="field">
+                            <label>Assignee</label>
+                            <input name="assignee" placeholder="Owner">
+                        </div>
+                        <div class="field">
+                            <label>Priority</label>
+                            <select name="priority">
+                                {% for value, label in priorities %}
+                                    <option value="{{ value }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label>Story points</label>
+                            <input type="number" name="story_points" min="0" value="1">
+                        </div>
+                        <div class="field">
+                            <label>Status</label>
+                            <select name="status">
+                                {% for value, label in statuses %}
+                                    <option value="{{ value }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="field full">
+                            <label>Description</label>
+                            <textarea name="description" placeholder="Acceptance notes or context"></textarea>
+                        </div>
+                        <div class="field full">
+                            <label>Blocker reason</label>
+                            <textarea name="blocker_reason" placeholder="Leave blank if this item is not blocked"></textarea>
+                        </div>
+                        <div class="field wide">
+                            <label>Blocker owner</label>
+                            <input name="blocker_owner" placeholder="Who can unblock it?">
+                        </div>
+                        <div class="field">
+                            <label>Blocked</label>
+                            <span class="checkbox-row">
+                                <input type="checkbox" name="blocked" id="new-blocked">
+                                <label for="new-blocked">Needs help</label>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="action-row">
+                        <button type="submit">Add to sprint</button>
+                    </div>
+                </form>
+            </section>
+        </div>
+    </section>
+
+    <section class="tab-panel" data-panel="board">
+        <section class="panel">
+            <div class="section-title">
+                <div>
+                    <h3>Scrum board</h3>
+                    <p class="muted">Update ownership, status, points, priority, and blockers without leaving the board.</p>
+                </div>
+            </div>
+
+            <div class="board">
+                {% for column in board_columns %}
+                    <div class="board-column">
+                        <div class="column-heading">
+                            <strong>{{ column.label }}</strong>
+                            <span class="pill">{{ column.items|length }}</span>
+                        </div>
+
+                        {% for item in column.items %}
+                            <div class="work-item">
+                                <form method="POST" class="work-item-form">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="update_item">
+                                    <input type="hidden" name="item_id" value="{{ item.id }}">
+                                    <input type="hidden" name="next_tab" value="board">
+
+                                    <div class="field">
+                                        <label>Title</label>
+                                        <input name="title" value="{{ item.title }}" required>
+                                    </div>
+
+                                    <div class="field">
+                                        <label>Description</label>
+                                        <textarea name="description">{{ item.description }}</textarea>
+                                    </div>
+
+                                    <div class="work-meta">
+                                        <span class="pill">{{ item.get_priority_display }}</span>
+                                        <span class="pill">{{ item.story_points }} pts</span>
+                                        {% if item.assignee %}
+                                            <span class="pill">{{ item.assignee }}</span>
+                                        {% endif %}
+                                        {% if item.blocked %}
+                                            <span class="pill danger">Blocked</span>
+                                        {% endif %}
+                                    </div>
+
+                                    <div class="compact-grid">
+                                        <div class="field">
+                                            <label>Status</label>
+                                            <select name="status">
+                                                {% for value, label in statuses %}
+                                                    <option value="{{ value }}" {% if item.status == value %}selected{% endif %}>{{ label }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="field">
+                                            <label>Assignee</label>
+                                            <input name="assignee" value="{{ item.assignee }}">
+                                        </div>
+                                        <div class="field">
+                                            <label>Priority</label>
+                                            <select name="priority">
+                                                {% for value, label in priorities %}
+                                                    <option value="{{ value }}" {% if item.priority == value %}selected{% endif %}>{{ label }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="field">
+                                            <label>Points</label>
+                                            <input type="number" name="story_points" min="0" value="{{ item.story_points }}">
+                                        </div>
+                                    </div>
+
+                                    <div class="field">
+                                        <label>Blocker reason</label>
+                                        <textarea name="blocker_reason">{{ item.blocker_reason }}</textarea>
+                                    </div>
+                                    <div class="field">
+                                        <label>Blocker owner</label>
+                                        <input name="blocker_owner" value="{{ item.assignee }}">
+                                    </div>
+                                    <span class="checkbox-row">
+                                        <input type="checkbox" name="blocked" id="blocked-{{ item.id }}" {% if item.blocked %}checked{% endif %}>
+                                        <label for="blocked-{{ item.id }}">Blocked</label>
+                                    </span>
+
+                                    <button type="submit" class="secondary-button">Save changes</button>
+                                </form>
+
+                                <form method="POST">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="delete_item">
+                                    <input type="hidden" name="item_id" value="{{ item.id }}">
+                                    <input type="hidden" name="next_tab" value="board">
+                                    <button type="submit" class="danger-button">Delete item</button>
+                                </form>
+                            </div>
+                        {% empty %}
+                            <div class="empty-state">No items in this column.</div>
+                        {% endfor %}
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+    </section>
+
+    <section class="tab-panel" data-panel="blockers">
+        <section class="panel">
+            <div class="section-title">
+                <div>
+                    <h3>Blocker queue</h3>
+                    <p class="muted">Track ownership, status, and resolution notes for Scrum Master follow-up.</p>
+                </div>
+            </div>
+
+            <div class="table-list">
+                {% for blocker in blockers %}
+                    <form method="POST" class="table-row">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="update_blocker">
+                        <input type="hidden" name="blocker_id" value="{{ blocker.id }}">
+                        <input type="hidden" name="next_tab" value="blockers">
+
+                        <div>
+                            <strong>{{ blocker.sprint_item.title }}</strong>
+                            <p class="muted">{{ blocker.sprint_item.blocker_reason|default:"No reason captured yet." }}</p>
+                            <div class="field">
+                                <label>Resolution note</label>
+                                <textarea name="resolution_note">{{ blocker.resolution_note }}</textarea>
+                            </div>
+                        </div>
+
+                        <div class="field">
+                            <label>Owner</label>
+                            <input name="owner" value="{{ blocker.owner }}">
+                        </div>
+
+                        <div class="field">
+                            <label>Status</label>
+                            <select name="blocker_status">
+                                {% for value, label in blocker_statuses %}
+                                    <option value="{{ value }}" {% if blocker.status == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                            <button type="submit" class="secondary-button">Save</button>
+                        </div>
+                    </form>
+                {% empty %}
+                    <div class="empty-state">No blockers for this sprint.</div>
+                {% endfor %}
+            </div>
+        </section>
+    </section>
+
+    <section class="tab-panel" data-panel="standup">
+        <div class="split-grid">
+            <section class="panel">
+                <div class="section-title">
+                    <div>
+                        <h3>Daily standup</h3>
+                        <p class="muted">Capture yesterday, today, and blockers in a consistent format.</p>
+                    </div>
+                </div>
+
+                <form method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add_standup">
+                    <input type="hidden" name="next_tab" value="standup">
+
+                    <div class="form-grid">
+                        <div class="field full">
+                            <label>Yesterday</label>
+                            <textarea name="yesterday" placeholder="What moved forward?"></textarea>
+                        </div>
+                        <div class="field full">
+                            <label>Today</label>
+                            <textarea name="today" placeholder="What is the plan?"></textarea>
+                        </div>
+                        <div class="field full">
+                            <label>Blockers</label>
+                            <textarea name="standup_blockers" placeholder="What needs help?"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="action-row">
+                        <button type="submit">Add standup update</button>
+                    </div>
+                </form>
+            </section>
+
+            <section class="panel">
+                <div class="section-title">
+                    <div>
+                        <h3>Recent updates</h3>
+                        <p class="muted">Latest standup notes for this sprint.</p>
+                    </div>
+                </div>
+
+                <div class="standup-list">
+                    {% for standup in standups %}
+                        <div class="standup-entry">
+                            <strong>{{ standup.user_name }}</strong>
+                            <p><span class="muted">Yesterday:</span> {{ standup.yesterday|default:"-" }}</p>
+                            <p><span class="muted">Today:</span> {{ standup.today|default:"-" }}</p>
+                            <p><span class="muted">Blockers:</span> {{ standup.blockers|default:"-" }}</p>
+                        </div>
+                    {% empty %}
+                        <div class="empty-state">No standup updates yet.</div>
+                    {% endfor %}
+                </div>
+            </section>
+        </div>
+    </section>
 </div>
+
+<script>
+function activateAgendaTab(tab) {
+    document.querySelectorAll('[data-tab]').forEach((item) => {
+        item.classList.toggle('active', item.dataset.tab === tab);
+    });
+
+    document.querySelectorAll('[data-panel]').forEach((panel) => {
+        panel.classList.toggle('active', panel.dataset.panel === tab);
+    });
+}
+
+document.querySelectorAll('[data-tab]').forEach((button) => {
+    button.addEventListener('click', () => {
+        const tab = button.dataset.tab;
+        localStorage.setItem('agendaTab', tab);
+        activateAgendaTab(tab);
+    });
+});
+
+const queryTab = new URLSearchParams(window.location.search).get('tab');
+activateAgendaTab(queryTab || localStorage.getItem('agendaTab') || 'plan');
+if (queryTab) {
+    localStorage.setItem('agendaTab', queryTab);
+}
+</script>
 
 {% endblock %}
