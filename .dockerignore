@@ -1,0 +1,16 @@
+.git
+.gitignore
+.venv
+__pycache__/
+*.py[cod]
+*.sqlite3
+db.sqlite3
+.python-version
+.gunicorn.pid
+media/
+staticfiles/
+test-results/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.DS_Store

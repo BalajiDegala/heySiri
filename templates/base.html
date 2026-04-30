@@ -260,16 +260,103 @@
         .eyebrow {
             margin: 0;
             color: var(--accent-strong);
-            font-size: 13px;
+            font-size: 11px;
             font-weight: 900;
             text-transform: uppercase;
-            letter-spacing: 0.04em;
+            letter-spacing: 0.22em;
         }
 
         .topbar-brand {
             grid-column: 1;
             justify-self: start;
             min-width: 0;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .brand-lockup {
+            display: inline-flex;
+            align-items: center;
+            min-width: 0;
+            gap: 0;
+            padding-right: 6px;
+        }
+
+        .brand-name {
+            margin: 0;
+            position: relative;
+            z-index: 1;
+            display: inline-flex;
+            align-items: baseline;
+            gap: 0;
+            font-weight: 900;
+            text-transform: lowercase;
+            text-shadow: none;
+            font-family: "Arial Black", "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .brand-hey,
+        .brand-siri {
+            display: inline-block;
+            line-height: 1;
+            position: relative;
+        }
+
+        .brand-hey {
+            padding-right: 2px;
+            color: #ffffff;
+            font-size: 27px;
+            font-weight: 900;
+            letter-spacing: -0.06em;
+        }
+
+        .brand-hey::after {
+            content: "";
+            position: absolute;
+            left: 15px;
+            bottom: 4px;
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+            background: #2aa7ff;
+            z-index: -1;
+            animation: brandAccentPulse 3s ease-in-out infinite;
+        }
+
+        .brand-siri {
+            margin-left: 1px;
+            color: #ffffff;
+            font-size: 27px;
+            font-weight: 900;
+            letter-spacing: -0.06em;
+        }
+
+        .brand-siri::after {
+            content: "";
+            position: absolute;
+            right: -5px;
+            top: 5px;
+            width: 12px;
+            height: 15px;
+            border-radius: 0 4px 4px 0;
+            background: #2aa7ff;
+            z-index: -1;
+            animation: brandAccentPulse 3s ease-in-out infinite 0.25s;
+        }
+
+        .brand-trail {
+            display: none;
+        }
+
+        @keyframes brandAccentPulse {
+            0%, 100% {
+                transform: translateY(0px);
+                opacity: 0.92;
+            }
+            50% {
+                transform: translateY(-1px);
+                opacity: 1;
+            }
         }
 
         .topbar h1 {
@@ -609,6 +696,13 @@
             -webkit-backdrop-filter: blur(14px);
         }
 
+        @media (prefers-reduced-motion: reduce) {
+            .brand-dot-large,
+            .brand-dot-small {
+                animation: none;
+            }
+        }
+
         @media (max-width: 900px) {
             .topbar {
                 display: flex;
@@ -640,6 +734,29 @@
                 padding: 12px;
             }
 
+            .brand-hey {
+                padding-right: 2px;
+                font-size: 22px;
+            }
+
+            .brand-siri {
+                font-size: 22px;
+            }
+
+            .brand-hey::after {
+                left: 12px;
+                bottom: 3px;
+                width: 8px;
+                height: 8px;
+            }
+
+            .brand-siri::after {
+                right: -4px;
+                top: 4px;
+                width: 10px;
+                height: 12px;
+            }
+
             .topbar h1 {
                 font-size: 22px;
             }
@@ -660,10 +777,15 @@
     <div class="app-frame">
         <header class="topbar">
             <div class="topbar-brand">
-                <p class="eyebrow">heysiri</p>
+                <div class="brand-lockup">
+                    <p class="brand-name">
+                        <span class="brand-hey">hey</span>
+                        <span class="brand-siri">siri</span>
+                    </p>
+                </div>
             </div>
             <div class="topbar-copy">
-                <h1>Findings</h1>
+                <h1>F I N D I N G S</h1>
             </div>
             <div class="topbar-actions">
                 <details class="profile-menu">

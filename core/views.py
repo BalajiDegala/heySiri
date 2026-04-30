@@ -1,7 +1,5 @@
-from datetime import timedelta
-
 from django.contrib import messages
-from django.db.models import Count, Sum
+from django.db.models import Count
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -9,12 +7,8 @@ from django.utils import timezone
 
 from .models import (
     ActivityLog,
-    Blocker,
     Finding,
     FindingComment,
-    Sprint,
-    SprintItem,
-    StandupUpdate,
     Topic,
     UserSession,
 )
@@ -26,75 +20,9 @@ def current_user(request):
     return request.session.get('user') or "Guest"
 
 
-def get_active_sprint():
-    sprint = Sprint.objects.filter(is_active=True).first()
-    if sprint:
-        return sprint
-
-    today = timezone.localdate()
-    return Sprint.objects.create(
-        name="Sprint 1",
-        goal="Plan, track, and unblock the current sprint.",
-        start_date=today,
-        end_date=today + timedelta(days=13),
-    )
-
-
-def sprint_metrics(sprint):
-    items = sprint.items.all()
-    total_items = items.count()
-    done_items = items.filter(status=SprintItem.DONE).count()
-    total_points = items.aggregate(total=Sum("story_points"))["total"] or 0
-    done_points = items.filter(status=SprintItem.DONE).aggregate(total=Sum("story_points"))["total"] or 0
-
-    return {
-        "total_items": total_items,
-        "done_items": done_items,
-        "total_points": total_points,
-        "done_points": done_points,
-        "remaining_points": max(total_points - done_points, 0),
-        "blocked_items": items.filter(blocked=True).count(),
-        "percent": int((done_items / total_items) * 100) if total_items else 0,
-    }
-
-
-def parse_story_points(value):
-    try:
-        return max(int(value), 0)
-    except (TypeError, ValueError):
-        return 1
-
-
-def sync_item_blocker(item, owner=""):
-    open_blocker = item.blockers.exclude(status=Blocker.RESOLVED).first()
-
-    if item.blocked:
-        if open_blocker:
-            open_blocker.owner = owner or open_blocker.owner or item.assignee
-            open_blocker.save()
-        else:
-            Blocker.objects.create(sprint_item=item, owner=owner or item.assignee)
-        return
-
-    if open_blocker:
-        open_blocker.status = Blocker.RESOLVED
-        open_blocker.resolution_note = open_blocker.resolution_note or "Blocker cleared from agenda."
-        open_blocker.resolved_at = timezone.now()
-        open_blocker.save()
-
-
 def delete_finding_file(finding):
     if finding.file:
         finding.file.delete(save=False)
-
-
-def redirect_with_tab(name, tab=None, anchor=None):
-    url = reverse(name)
-    if tab:
-        url = f"{url}?tab={tab}"
-    if anchor:
-        url = f"{url}#{anchor}"
-    return HttpResponseRedirect(url)
 
 
 def resolve_topic_by_name(topic_name, user, fallback_topic=None):
@@ -148,10 +76,6 @@ def logout_view(request):
 
     request.session.flush()
     return redirect('login')
-
-
-def agenda(request):
-    return redirect('findings')
 
 
 def findings(request):
@@ -356,11 +280,3 @@ def findings(request):
             'show_all_topics': show_all_topics,
         },
     )
-
-
-def activity(request):
-    return redirect('findings')
-
-
-def dashboard(request):
-    return redirect('findings')

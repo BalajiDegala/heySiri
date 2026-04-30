@@ -1,0 +1,39 @@
+services:
+  app:
+    build:
+      context: .
+    image: heysiri:prod
+    container_name: heysiri-app
+    user: "0:0"
+    restart: unless-stopped
+    environment:
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-replace-this-with-a-real-secret}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-heysiri.d2-india.com}
+      DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-http://heysiri.d2-india.com:8090}
+      DJANGO_SECURE_SSL_REDIRECT: ${DJANGO_SECURE_SSL_REDIRECT:-false}
+      DJANGO_SESSION_COOKIE_SECURE: ${DJANGO_SESSION_COOKIE_SECURE:-false}
+      DJANGO_CSRF_COOKIE_SECURE: ${DJANGO_CSRF_COOKIE_SECURE:-false}
+      DJANGO_SECURE_HSTS_SECONDS: ${DJANGO_SECURE_HSTS_SECONDS:-0}
+      PORT: 8000
+    volumes:
+      - ./data/db.sqlite3:/app/db.sqlite3:Z
+      - ./data/media:/app/media:Z
+    expose:
+      - "8000"
+
+  caddy:
+    image: caddy:2
+    container_name: heysiri-caddy
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "8090:80"
+    volumes:
+      - ./Caddyfile.local:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:
