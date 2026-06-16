@@ -41,3 +41,6 @@ Notes:
 - SQLite and uploaded files need persistent storage. Mount `/app/db.sqlite3` for the database file and `/app/media` for uploads, or switch to an external database before a multi-instance deployment.
 - Set `DJANGO_DEBUG=false` and a real `DJANGO_SECRET_KEY` in production.
 - Tune Gunicorn with `PORT`, `GUNICORN_WORKERS`, `GUNICORN_THREADS`, and `GUNICORN_TIMEOUT` if needed.
+
+
+Making a new update
