@@ -42,5 +42,3 @@ Notes:
 - Set `DJANGO_DEBUG=false` and a real `DJANGO_SECRET_KEY` in production.
 - Tune Gunicorn with `PORT`, `GUNICORN_WORKERS`, `GUNICORN_THREADS`, and `GUNICORN_TIMEOUT` if needed.
 
-
-Making a new update
